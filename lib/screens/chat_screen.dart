@@ -295,11 +295,8 @@ class _ChatScreenState extends State<ChatScreen> {
         return WillPopScope(
           onWillPop: () async {
             if (!context.mounted) return false;
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/home');
-            }
+            // Всегда уходим на главный экран, как в настройках
+            context.go('/home');
             return false;
           },
           child: ErrorBoundary(
@@ -375,6 +372,11 @@ class _ChatScreenState extends State<ChatScreen> {
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       toolbarHeight: 48,
+      leading: IconButton(
+        tooltip: 'На главную',
+        icon: const Icon(Icons.home, size: 18),
+        onPressed: () => context.go('/home'),
+      ),
       title: _buildModelSelector(context),
       actions: [
         _buildBalanceDisplay(context),
