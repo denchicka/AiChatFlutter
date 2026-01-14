@@ -769,10 +769,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
 
-    return Stack(
-      children: [
-        Scaffold(
-          appBar: AppBar(title: const Text('Настройки')),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/home');
+          }
+        }
+      },
+      child: Stack(
+        children: [
+          Scaffold(
+            appBar: AppBar(title: const Text('Настройки')),
           body: ListView(
             controller: _scrollController,
             key: _settingsListKey,
@@ -985,7 +996,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onNext: _onOnboardingNext,
             onSkip: _onOnboardingSkip,
           ),
-      ],
+        ],
+      ),
     );
   }
 }

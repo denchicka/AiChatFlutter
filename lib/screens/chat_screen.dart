@@ -13,7 +13,6 @@ import 'package:markdown/markdown.dart' as md;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/rendering.dart';
 
-import '../widgets/theme_mode_button.dart';
 import '../features/chat/widgets/models/model_sort.dart';
 import '../widgets/top_toast.dart';
 import '../providers/onboarding_provider.dart';
@@ -136,20 +135,20 @@ class _ChatScreenState extends State<ChatScreen> {
         title: 'История сообщений',
         description:
             'Здесь отображаются все ваши сообщения и ответы AI. Поддерживается форматирование markdown, код и формулы LaTeX.',
-        position: TooltipPosition.top,
+        position: TooltipPosition.bottom, // Снизу, чтобы не перекрывать сообщения
       ),
       _ChatOnboardingStep(
         key: _inputAreaKey,
         title: 'Поле ввода',
         description:
             'Введите ваше сообщение здесь. Нажмите Enter для отправки, Shift+Enter для новой строки. Используйте кнопку меню для дополнительных функций.',
-        position: TooltipPosition.top,
+        position: TooltipPosition.bottom, // Изменено на bottom, чтобы не перекрывать прозрачную область
       ),
       _ChatOnboardingStep(
         key: _menuKey,
         title: 'Дополнительные функции',
         description:
-            'Меню: обновление, аналитика, экспорт истории, очистка чата.',
+            'Меню: настройки, обновление, аналитика, экспорт истории, очистка чата.',
         position: TooltipPosition.left, // Слева для лучшего отображения на мобильных
       ),
       _ChatOnboardingStep(
@@ -157,7 +156,7 @@ class _ChatScreenState extends State<ChatScreen> {
         title: 'Отправьте свое первое сообщение',
         description:
             'Вы изумительны! Теперь попробуйте отправить свое первое сообщение AI. Просто введите текст и нажмите Enter или кнопку отправки.',
-        position: TooltipPosition.top,
+        position: TooltipPosition.bottom, // Изменено на bottom, чтобы не перекрывать прозрачную область
       ),
     ]);
   }
@@ -293,12 +292,22 @@ class _ChatScreenState extends State<ChatScreen> {
           });
         }
 
-        return ErrorBoundary(
-          child: Stack(
-            children: [
-              Scaffold(
-                appBar: _buildAppBar(context),
-                body: SafeArea(
+        return WillPopScope(
+          onWillPop: () async {
+            if (!context.mounted) return false;
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+            return false;
+          },
+          child: ErrorBoundary(
+            child: Stack(
+              children: [
+                Scaffold(
+                  appBar: _buildAppBar(context),
+                  body: SafeArea(
                   child: Stack(
                     children: [
                       Column(
@@ -356,6 +365,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
             ],
           ),
+        ),
         );
       },
     );
@@ -365,21 +375,9 @@ class _ChatScreenState extends State<ChatScreen> {
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       toolbarHeight: 48,
-      leading: IconButton(
-        tooltip: 'На главную',
-        icon: const Icon(Icons.home, size: 18),
-        onPressed: () => context.go('/home'),
-      ),
       title: _buildModelSelector(context),
       actions: [
-        const ThemeModeButton(),
-        const SizedBox(width: 8),
         _buildBalanceDisplay(context),
-        IconButton(
-          tooltip: 'Настройки',
-          icon: const Icon(Icons.settings, size: 18),
-          onPressed: () => context.push('/settings'),
-        ),
         _buildMenuButton(context),
         const SizedBox(width: 6),
       ],
@@ -402,9 +400,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
         final title = (current?['name'] ?? 'Выберите модель').toString();
 
+        // Адаптивная ширина с учетом доступного пространства
+        final screenWidth = MediaQuery.of(context).size.width;
+        final availableWidth = screenWidth - 120; // Учитываем кнопки и отступы
+        final selectorWidth = (availableWidth * 0.6).clamp(180.0, 400.0);
+        
         return SizedBox(
           key: _modelSelectorKey,
-          width: MediaQuery.of(context).size.width * 0.52,
+          width: selectorWidth,
           child: OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               backgroundColor: scheme.surfaceContainerHighest,
@@ -472,6 +475,9 @@ class _ChatScreenState extends State<ChatScreen> {
       onSelected: (String choice) async {
         final chatProvider = context.read<ChatProvider>();
         switch (choice) {
+          case 'settings':
+            context.push('/settings');
+            break;
           case 'refresh':
             await chatProvider.refreshAll(); // <-- добавим в ChatProvider
             if (context.mounted) {
@@ -505,6 +511,18 @@ class _ChatScreenState extends State<ChatScreen> {
         final itemStyle = TextStyle(color: s.onSurface, fontSize: 13);
 
         return [
+          PopupMenuItem<String>(
+            value: 'settings',
+            height: 40,
+            child: Row(
+              children: [
+                Icon(Icons.settings, size: 18, color: s.onSurfaceVariant),
+                const SizedBox(width: 10),
+                Text('Настройки', style: itemStyle),
+              ],
+            ),
+          ),
+          const PopupMenuDivider(),
           PopupMenuItem<String>(
             value: 'refresh',
             height: 40,

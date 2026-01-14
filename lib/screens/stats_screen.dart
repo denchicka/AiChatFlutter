@@ -7,7 +7,6 @@ import '../widgets/top_toast.dart';
 import '../providers/onboarding_provider.dart';
 import '../widgets/onboarding/onboarding_overlay.dart';
 
-import '../widgets/theme_mode_button.dart';
 import '../widgets/settings_icon_button.dart';
 import '../widgets/analytics/analytics_controls.dart';
 import '../widgets/analytics/usage_panel.dart';
@@ -132,27 +131,30 @@ class _StatsScreenState extends State<StatsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final range = _resolveRange();
 
-    return Stack(
-      children: [
-        Scaffold(
-          appBar: AppBar(
-            toolbarHeight: 48,
-            title: const Text('Статистика', style: TextStyle(fontSize: 14)),
-            leading: IconButton(
-              tooltip: 'На главную',
-              icon: Icon(Icons.home, size: 18, color: scheme.onSurfaceVariant),
-              onPressed: () => context.go('/home'),
+    return WillPopScope(
+      onWillPop: () async {
+        if (!context.mounted) return false;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/home');
+        }
+        return false;
+      },
+      child: Stack(
+        children: [
+          Scaffold(
+            appBar: AppBar(
+              toolbarHeight: 48,
+              title: const Text('Статистика', style: TextStyle(fontSize: 14)),
+              actions: const [
+                SettingsIconButton(),
+                SizedBox(width: 8),
+              ],
             ),
-            actions: const [
-              ThemeModeButton(),
-              SettingsIconButton(),
-              SizedBox(width: 8),
-            ],
-          ),
-          body: ListView(
+            body: ListView(
             key: _statsContentKey,
             padding: const EdgeInsets.all(12),
             children: [
@@ -228,7 +230,8 @@ class _StatsScreenState extends State<StatsScreen> {
             onNext: _onOnboardingNext,
             onSkip: _onOnboardingSkip,
           ),
-      ],
+        ],
+      ),
     );
   }
 }

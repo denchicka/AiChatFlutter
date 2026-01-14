@@ -149,7 +149,10 @@ class AnalyticsControls extends StatelessWidget {
                 segments: SortKey.values
                     .map((k) => ButtonSegment(
                           value: k,
-                          label: Text(_sortLabel(k)),
+                          label: Text(
+                            _sortLabel(k),
+                            style: const TextStyle(fontSize: 11),
+                          ),
                           icon: Icon(
                             k == SortKey.cost
                                 ? Icons.attach_money_rounded

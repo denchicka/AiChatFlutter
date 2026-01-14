@@ -263,6 +263,27 @@ class _MessageBubble extends StatelessWidget {
       );
     }
 
+    Widget actionButtonsRow() {
+      final buttons = <Widget>[];
+      if (!message.isUser) {
+        buttons.add(regenerateButton());
+      }
+      if (latexOnly.isNotEmpty) {
+        buttons.add(copyLatexButton());
+      }
+      buttons.add(copyButton());
+
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (int i = 0; i < buttons.length; i++) ...[
+            if (i > 0) const SizedBox(width: 4),
+            buttons[i],
+          ],
+        ],
+      );
+    }
+
     return RepaintBoundary(
       child: Align(
         alignment:
@@ -373,11 +394,7 @@ class _MessageBubble extends StatelessWidget {
                           style: metaStyle,
                         ),
 
-                      if (!message.isUser) regenerateButton(),
-
-                      // ВСЕГДА последней
-                      if (latexOnly.isNotEmpty) copyLatexButton(),
-                      copyButton(),
+                      actionButtonsRow(),
                     ],
                   ),
                 ),

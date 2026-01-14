@@ -7,7 +7,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/onboarding_provider.dart';
-import '../widgets/theme_mode_button.dart';
 import '../widgets/settings_icon_button.dart';
 import '../widgets/top_toast.dart';
 import '../widgets/onboarding/onboarding_overlay.dart';
@@ -317,7 +316,6 @@ class _HomeScreenState extends State<HomeScreen> {
           appBar: AppBar(
             title: const Text('AIChatFlutter'),
             actions: [
-              const ThemeModeButton(),
               SettingsIconButton(),
               const SizedBox(width: 8),
             ],
@@ -342,28 +340,28 @@ class _HomeScreenState extends State<HomeScreen> {
                         subtitle:
                             'Перейти в чат (если сессия настроена/разблокирована)',
                         icon: Icons.chat,
-                        onTap: () => context.go('/chat'),
+                        onTap: () => context.push('/chat'),
                       ),
                       _NavTile(
                         key: _providerTileKey,
                         title: 'Провайдер',
                         subtitle: 'Настроить OpenRouter / VseGPT и ключ',
                         icon: Icons.settings,
-                        onTap: () => context.go('/provider'),
+                        onTap: () => context.push('/provider'),
                       ),
                       _NavTile(
                         key: _statsTileKey,
                         title: 'Статистика токенов',
                         subtitle: 'Использование токенов по моделям',
                         icon: Icons.analytics,
-                        onTap: () => context.go('/stats'),
+                        onTap: () => context.push('/stats'),
                       ),
                       _NavTile(
                         key: _chartTileKey,
                         title: 'График расходов',
                         subtitle: 'Расходы по дням',
                         icon: Icons.show_chart,
-                        onTap: () => context.go('/chart'),
+                        onTap: () => context.push('/chart'),
                       ),
                       _NavTile(
                         key: _settingsTileKey,

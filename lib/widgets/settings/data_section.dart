@@ -106,6 +106,8 @@ class DataSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = Platform.isAndroid || Platform.isIOS;
+
     return Column(
       children: [
         const InfoCallout(
@@ -117,15 +119,15 @@ class DataSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        HoverTile(
-          title: 'Открыть папку экспортов',
-          subtitle: Platform.isAndroid || Platform.isIOS
-              ? 'Может потребоваться файловый менеджер'
-              : 'Откроется системный проводник',
-          trailing: const Icon(Icons.open_in_new, size: 20),
-          onTap: () => _openExportsFolder(context),
-        ),
-        const SizedBox(height: 8),
+        if (!isMobile) ...[
+          HoverTile(
+            title: 'Открыть папку экспортов',
+            subtitle: 'Откроется системный проводник',
+            trailing: const Icon(Icons.open_in_new, size: 20),
+            onTap: () => _openExportsFolder(context),
+          ),
+          const SizedBox(height: 8),
+        ],
         HoverTile(
           title: 'Удалить историю чата',
           subtitle: 'Действие необратимо',

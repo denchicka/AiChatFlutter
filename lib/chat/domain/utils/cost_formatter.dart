@@ -85,15 +85,36 @@ class CostFormatter {
     if (pf == ProviderFilter.openrouter) {
       if (cost == 0.0) return 'FREE';
       if (cost.abs() < kTinyCost) return '<\$0.0001';
+      // Для больших значений используем компактный формат
+      if (cost >= 1000) {
+        return '\$${(cost / 1000).toStringAsFixed(2)}K';
+      }
+      if (cost >= 100) {
+        return '\$${cost.toStringAsFixed(2)}';
+      }
       return '\$${cost.toStringAsFixed(3)}';
     }
 
     if (pf == ProviderFilter.vsegpt) {
       if (cost.abs() < kTinyCost) return '<0.0001₽';
+      // Для больших значений используем компактный формат
+      if (cost >= 1000) {
+        return '${(cost / 1000).toStringAsFixed(2)}K₽';
+      }
+      if (cost >= 100) {
+        return '${cost.toStringAsFixed(2)}₽';
+      }
       return '${cost.toStringAsFixed(3)}₽';
     }
 
     if (cost.abs() < kTinyCost) return '<0.0001';
+    // Для больших значений используем компактный формат
+    if (cost >= 1000) {
+      return '${(cost / 1000).toStringAsFixed(2)}K';
+    }
+    if (cost >= 100) {
+      return cost.toStringAsFixed(2);
+    }
     return cost.toStringAsFixed(3);
   }
 

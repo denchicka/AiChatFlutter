@@ -186,14 +186,28 @@ class _OnboardingOverlayState extends State<OnboardingOverlay>
     }
 
     final size = renderBox.size;
-    final position = renderBox.localToGlobal(Offset.zero);
+    final overlayBox = context.findRenderObject() as RenderBox?;
+    final position = overlayBox == null
+        ? renderBox.localToGlobal(Offset.zero)
+        : renderBox.localToGlobal(Offset.zero, ancestor: overlayBox);
 
-    final newRect = Rect.fromLTWH(
+    final isModelSelector =
+        widget.title.contains('модел') || widget.title.contains('AI');
+    final isHomeStatus = widget.title.contains('Статус системы');
+    final isChart = widget.title.contains('График расходов');
+    final isProvider = widget.title.contains('Настройка провайдера');
+
+    final baseRect = Rect.fromLTWH(
       position.dx,
       position.dy,
       size.width,
       size.height,
     );
+
+    final inflateBy = isModelSelector
+        ? 6.0
+        : (isHomeStatus || isChart || isProvider ? 4.0 : 0.0);
+    final newRect = inflateBy > 0 ? baseRect.inflate(inflateBy) : baseRect;
 
     // Если это новый элемент, сохраняем предыдущий для плавного перехода
     if (_targetRect != null && _lastTargetKey != widget.targetKey) {
@@ -250,14 +264,20 @@ class _OnboardingOverlayState extends State<OnboardingOverlay>
     if (_targetRect == null) return;
 
     final screenSize = MediaQuery.of(context).size;
+    final safeAreaTop = MediaQuery.of(context).padding.top;
+    final safeAreaBottom = MediaQuery.of(context).padding.bottom;
+    final safeAreaLeft = MediaQuery.of(context).padding.left;
+    final safeAreaRight = MediaQuery.of(context).padding.right;
     final isMobile = screenSize.width < 600;
     final padding = isMobile ? 12.0 : 16.0;
     final tooltipSpacing = isMobile ? 8.0 : 12.0;
     
     // Адаптивный размер tooltip для мобильных устройств
     // Уменьшаем размер для компактности на маленьких экранах
+    // Учитываем safe area для правильного расчета доступного пространства
+    final availableScreenWidth = screenSize.width - safeAreaLeft - safeAreaRight;
     final estimatedTooltipWidth = isMobile 
-        ? (screenSize.width * 0.80).clamp(260.0, 360.0)
+        ? (availableScreenWidth * 0.85).clamp(260.0, 360.0)
         : 320.0;
     final estimatedTooltipHeight = isMobile ? 160.0 : 180.0;
 
@@ -291,30 +311,78 @@ class _OnboardingOverlayState extends State<OnboardingOverlay>
     }
 
     // Адаптивное позиционирование - выбираем лучшую позицию
-    final availableSpaceTop = _targetRect!.top - padding;
-    final availableSpaceBottom = screenSize.height - _targetRect!.bottom - padding;
-    final availableSpaceLeft = _targetRect!.left - padding;
-    final availableSpaceRight = screenSize.width - _targetRect!.right - padding;
+    // Учитываем safe area для правильного расчета доступного пространства
+    final availableSpaceTop = _targetRect!.top - padding - safeAreaTop;
+    final availableSpaceBottom = screenSize.height - _targetRect!.bottom - padding - safeAreaBottom;
+    final availableSpaceLeft = _targetRect!.left - padding - safeAreaLeft;
+    final availableSpaceRight = screenSize.width - _targetRect!.right - padding - safeAreaRight;
 
     // Определяем лучшую позицию на основе доступного пространства
+    // Приоритет: избегаем перекрытия важного контента (особенно для истории сообщений)
     TooltipPosition bestPosition = widget.position;
     double maxSpace = 0;
 
-    if (availableSpaceTop > maxSpace && availableSpaceTop >= estimatedTooltipHeight) {
-      maxSpace = availableSpaceTop;
-      bestPosition = TooltipPosition.top;
-    }
-    if (availableSpaceBottom > maxSpace && availableSpaceBottom >= estimatedTooltipHeight) {
-      maxSpace = availableSpaceBottom;
-      bestPosition = TooltipPosition.bottom;
-    }
-    if (availableSpaceLeft > maxSpace && availableSpaceLeft >= estimatedTooltipWidth) {
-      maxSpace = availableSpaceLeft;
-      bestPosition = TooltipPosition.left;
-    }
-    if (availableSpaceRight > maxSpace && availableSpaceRight >= estimatedTooltipWidth) {
-      maxSpace = availableSpaceRight;
-      bestPosition = TooltipPosition.right;
+    // Для истории сообщений и выбора модели предпочитаем позицию снизу или сбоку, чтобы не перекрывать контент
+    final isMessagesList = widget.title.contains('История сообщений') || 
+                          widget.title.contains('сообщений');
+    final isModelSelector = widget.title.contains('модел') || 
+                          widget.title.contains('AI');
+    final isInputField = widget.title.contains('Поле ввода') || 
+                        widget.title.contains('первое сообщение');
+    
+    if (isMessagesList || isModelSelector || isInputField) {
+      // Для истории сообщений, выбора модели и поля ввода приоритет: bottom > left > right > top
+      // Это предотвращает перекрытие важного контента
+      // Для поля ввода особенно важно не перекрывать прозрачную область
+      if (isInputField) {
+        // Для поля ввода предпочитаем top, но только если есть достаточно места
+        if (availableSpaceTop >= estimatedTooltipHeight + 20) { // +20 для запаса
+          bestPosition = TooltipPosition.top;
+          maxSpace = availableSpaceTop;
+        } else if (availableSpaceBottom >= estimatedTooltipHeight) {
+          bestPosition = TooltipPosition.bottom;
+          maxSpace = availableSpaceBottom;
+        } else if (availableSpaceLeft >= estimatedTooltipWidth) {
+          bestPosition = TooltipPosition.left;
+          maxSpace = availableSpaceLeft;
+        } else if (availableSpaceRight >= estimatedTooltipWidth) {
+          bestPosition = TooltipPosition.right;
+          maxSpace = availableSpaceRight;
+        }
+      } else {
+        // Для истории сообщений и выбора модели
+        if (availableSpaceBottom >= estimatedTooltipHeight) {
+          bestPosition = TooltipPosition.bottom;
+          maxSpace = availableSpaceBottom;
+        } else if (availableSpaceLeft >= estimatedTooltipWidth) {
+          bestPosition = TooltipPosition.left;
+          maxSpace = availableSpaceLeft;
+        } else if (availableSpaceRight >= estimatedTooltipWidth) {
+          bestPosition = TooltipPosition.right;
+          maxSpace = availableSpaceRight;
+        } else if (availableSpaceTop >= estimatedTooltipHeight) {
+          bestPosition = TooltipPosition.top;
+          maxSpace = availableSpaceTop;
+        }
+      }
+    } else {
+      // Для других элементов используем стандартную логику
+      if (availableSpaceTop > maxSpace && availableSpaceTop >= estimatedTooltipHeight) {
+        maxSpace = availableSpaceTop;
+        bestPosition = TooltipPosition.top;
+      }
+      if (availableSpaceBottom > maxSpace && availableSpaceBottom >= estimatedTooltipHeight) {
+        maxSpace = availableSpaceBottom;
+        bestPosition = TooltipPosition.bottom;
+      }
+      if (availableSpaceLeft > maxSpace && availableSpaceLeft >= estimatedTooltipWidth) {
+        maxSpace = availableSpaceLeft;
+        bestPosition = TooltipPosition.left;
+      }
+      if (availableSpaceRight > maxSpace && availableSpaceRight >= estimatedTooltipWidth) {
+        maxSpace = availableSpaceRight;
+        bestPosition = TooltipPosition.right;
+      }
     }
 
     // Если предпочтительная позиция не подходит, используем лучшую
@@ -354,56 +422,89 @@ class _OnboardingOverlayState extends State<OnboardingOverlay>
     }
 
     // Корректируем позицию, чтобы tooltip не выходил за границы экрана
-    // Для горизонтального центрирования
+    // Для горизонтального центрирования (учитываем safe area)
     if (bestPosition == TooltipPosition.top || bestPosition == TooltipPosition.bottom) {
       preferredPosition = Offset(
         preferredPosition.dx.clamp(
-          padding + estimatedTooltipWidth / 2,
-          screenSize.width - padding - estimatedTooltipWidth / 2,
+          padding + safeAreaLeft + estimatedTooltipWidth / 2,
+          screenSize.width - padding - safeAreaRight - estimatedTooltipWidth / 2,
         ),
         preferredPosition.dy,
       );
     }
     
-    // Для вертикального центрирования
+    // Для вертикального центрирования (учитываем safe area)
     if (bestPosition == TooltipPosition.left || bestPosition == TooltipPosition.right) {
       preferredPosition = Offset(
         preferredPosition.dx,
         preferredPosition.dy.clamp(
-          padding + estimatedTooltipHeight / 2,
-          screenSize.height - padding - estimatedTooltipHeight / 2,
+          padding + safeAreaTop + estimatedTooltipHeight / 2,
+          screenSize.height - padding - safeAreaBottom - estimatedTooltipHeight / 2,
         ),
       );
     }
-
-    // Финальная проверка границ с учетом мобильных устройств
-    final safeAreaTop = MediaQuery.of(context).padding.top;
-    final safeAreaBottom = MediaQuery.of(context).padding.bottom;
-    final finalPosition = Offset(
-      preferredPosition.dx.clamp(
-        padding, 
-        screenSize.width - padding,
-      ),
-      preferredPosition.dy.clamp(
-        padding + safeAreaTop, 
-        screenSize.height - padding - safeAreaBottom,
-      ),
-    );
     
     // Сохраняем фактическую позицию для правильного центрирования
     _actualPosition = useBestPosition ? bestPosition : widget.position;
     
-    // Обновляем стабильные координаты только если позиция реально изменилась
-    final tooltipWidth = _tooltipSize?.width ?? 320.0;
-    final tooltipHeight = _tooltipSize?.height ?? 220.0;
-    final newLeft = (finalPosition.dx - tooltipWidth / 2).clamp(padding, screenSize.width - padding - tooltipWidth);
-    final newTop = _calculateTopPosition(tooltipHeight, screenSize);
+    // Получаем реальный размер tooltip или используем оценку
+    final tooltipWidth = _tooltipSize?.width ?? estimatedTooltipWidth;
+    final tooltipHeight = _tooltipSize?.height ?? estimatedTooltipHeight;
+    
+    // Вычисляем позицию с учетом реального размера tooltip
+    // Для мобильных устройств используем более строгие ограничения
+    double finalLeft;
+    double finalTop;
+    
+    if (bestPosition == TooltipPosition.top || bestPosition == TooltipPosition.bottom) {
+      // Горизонтальное центрирование относительно targetRect
+      // Учитываем safe area для правильного позиционирования
+      finalLeft = (preferredPosition.dx - tooltipWidth / 2).clamp(
+        padding + safeAreaLeft, 
+        screenSize.width - padding - safeAreaRight - tooltipWidth,
+      );
+      // Вертикальная позиция
+      finalTop = _calculateTopPosition(tooltipHeight, screenSize);
+    } else {
+      // Вертикальное центрирование относительно targetRect
+      finalTop = (preferredPosition.dy - tooltipHeight / 2).clamp(
+        padding + safeAreaTop, 
+        screenSize.height - padding - safeAreaBottom - tooltipHeight,
+      );
+      // Горизонтальная позиция
+      if (bestPosition == TooltipPosition.left) {
+        finalLeft = preferredPosition.dx - tooltipWidth - tooltipSpacing;
+      } else {
+        finalLeft = preferredPosition.dx + tooltipSpacing;
+      }
+      // Учитываем safe area для горизонтальных отступов
+      finalLeft = finalLeft.clamp(
+        padding + safeAreaLeft, 
+        screenSize.width - padding - safeAreaRight - tooltipWidth,
+      );
+    }
+    
+    double verticalShift = 0.0;
+    if (widget.title.contains('История сообщений')) {
+      verticalShift = -40.0;
+    } else if (widget.title.contains('Поле ввода') ||
+        widget.title.contains('первое сообщение')) {
+      verticalShift = -60.0;
+    }
+
+    final adjustedTop = (finalTop + verticalShift).clamp(
+      padding + safeAreaTop,
+      screenSize.height - padding - safeAreaBottom - tooltipHeight,
+    );
+
+    final finalPosition =
+        Offset(finalLeft + tooltipWidth / 2, adjustedTop + tooltipHeight / 2);
     
     // Всегда обновляем позицию для плавного перемещения (AnimatedPositioned позаботится об анимации)
     setState(() {
       _tooltipPosition = finalPosition;
-      _stableLeft = newLeft;
-      _stableTop = newTop;
+      _stableLeft = finalLeft;
+      _stableTop = adjustedTop;
     });
   }
   
@@ -417,20 +518,51 @@ class _OnboardingOverlayState extends State<OnboardingOverlay>
     final safeAreaBottom = MediaQuery.of(context).padding.bottom;
     final pos = _actualPosition ?? widget.position;
     
+    // Для элементов в AppBar (выбор модели) учитываем AppBar высоту
+    final isInAppBar = widget.title.contains('модел') || widget.title.contains('AI');
+    final appBarHeight = isInAppBar ? 48.0 : 0.0; // Стандартная высота AppBar
+    
     double top;
     if (pos == TooltipPosition.top) {
       top = _targetRect!.top - tooltipHeight - spacing;
+      // Для элементов в AppBar добавляем дополнительный отступ
+      if (isInAppBar) {
+        top = _targetRect!.bottom + spacing; // Размещаем снизу от AppBar
+      }
     } else if (pos == TooltipPosition.bottom) {
       top = _targetRect!.bottom + spacing;
+      // Для элементов в AppBar размещаем ниже AppBar
+      if (isInAppBar) {
+        top = _targetRect!.bottom + spacing + 8; // Дополнительный отступ от AppBar
+      }
     } else {
+      // Для left/right позиций центрируем вертикально
       top = _targetRect!.center.dy - tooltipHeight / 2;
     }
     
     // Учитываем safe area для мобильных устройств
-    return top.clamp(
-      padding + safeAreaTop, 
-      screenSize.height - padding - safeAreaBottom - tooltipHeight,
-    );
+    // На мобильных устройствах более строгие ограничения
+    final minTop = padding + safeAreaTop + (isInAppBar ? appBarHeight : 0);
+    final maxTop = screenSize.height - padding - safeAreaBottom - tooltipHeight;
+    
+    // Если tooltip не помещается, выбираем лучшую позицию
+    if (top < minTop) {
+      // Не хватает места сверху - размещаем снизу
+      if (pos == TooltipPosition.top && _targetRect!.bottom + spacing + tooltipHeight <= maxTop) {
+        top = _targetRect!.bottom + spacing;
+      } else {
+        top = minTop;
+      }
+    } else if (top > maxTop) {
+      // Не хватает места снизу - размещаем сверху
+      if (pos == TooltipPosition.bottom && _targetRect!.top - spacing - tooltipHeight >= minTop) {
+        top = _targetRect!.top - tooltipHeight - spacing;
+      } else {
+        top = maxTop;
+      }
+    }
+    
+    return top.clamp(minTop, maxTop);
   }
 
   @override
@@ -450,8 +582,9 @@ class _OnboardingOverlayState extends State<OnboardingOverlay>
     final scheme = Theme.of(context).colorScheme;
     final screenSize = MediaQuery.of(context).size;
 
-    return Stack(
-      children: [
+    return SizedBox.expand(
+      child: Stack(
+        children: [
         // Затемнение с вырезом и волнами (от подсвеченного элемента).
         // AbsorbPointer блокирует клики по фону.
         AbsorbPointer(
@@ -471,12 +604,23 @@ class _OnboardingOverlayState extends State<OnboardingOverlay>
                 return const SizedBox.shrink();
               }
               
+              // Определяем непрозрачность затемнения в зависимости от экрана
+              // Для home и provider экранов делаем менее темным
+              final isHomeOrProvider = widget.title.contains('Статус системы') || 
+                                      widget.title.contains('Настройка провайдера') ||
+                                      widget.title.contains('провайдера') ||
+                                      widget.title.contains('Чат с AI') ||
+                                      widget.title.contains('Статистика') ||
+                                      widget.title.contains('График расходов') ||
+                                      widget.title.contains('Настройки');
+              final overlayAlpha = isHomeOrProvider ? 0.3 : 0.5; // Менее темное для home/provider
+              
               // Всегда рисуем затемнение, чтобы покрыть весь экран во время перехода
               return RepaintBoundary(
                 child: CustomPaint(
                   painter: _OverlayPainter(
                     targetRect: animatedRect,
-                    overlayColor: Colors.black.withValues(alpha: 0.7),
+                    overlayColor: Colors.black.withValues(alpha: overlayAlpha),
                     highlightColor: scheme.primary.withValues(alpha: 0.3),
                     pulseScale: _pulseAnimation.value,
                     rippleProgress: _rippleAnimation.value,
@@ -495,13 +639,13 @@ class _OnboardingOverlayState extends State<OnboardingOverlay>
         ),
 
         // Подсказка с плавным перемещением и появлением
-        if (_tooltipPosition != null)
+        if (_tooltipPosition != null && _stableLeft >= 0 && _stableTop >= 0)
           AnimatedPositioned(
             // Синхронизируем длительность с анимацией затемнения для плавности
             duration: const Duration(milliseconds: 900),
             curve: Curves.easeInOutCubic, // Та же кривая для синхронизации
-            left: _stableLeft,
-            top: _stableTop,
+            left: _stableLeft.clamp(0.0, screenSize.width),
+            top: _stableTop.clamp(0.0, screenSize.height),
             child: AnimatedSwitcher(
               // Увеличена длительность для более плавного перехода
               duration: const Duration(milliseconds: 500),
@@ -530,7 +674,8 @@ class _OnboardingOverlayState extends State<OnboardingOverlay>
               ),
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -541,17 +686,31 @@ class _OnboardingOverlayState extends State<OnboardingOverlay>
         final isMobile = screenSize.width < 600;
         
         // Адаптивная ширина для мобильных с учетом safe area
-        // Уменьшаем размер для компактности
+        // Уменьшаем размер для компактности на маленьких экранах
+        final safeAreaLeft = MediaQuery.of(context).padding.left;
+        final safeAreaRight = MediaQuery.of(context).padding.right;
         final horizontalPadding = isMobile ? 16.0 : 20.0;
+        final availableWidth = screenSize.width - safeAreaLeft - safeAreaRight - horizontalPadding * 2;
         final maxWidth = isMobile 
-            ? (screenSize.width - horizontalPadding * 2).clamp(260.0, 360.0)
+            ? availableWidth.clamp(260.0, 360.0)
             : 320.0;
 
         return Container(
           key: _tooltipKey,
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          margin: EdgeInsets.all(isMobile ? 12 : 16),
-          padding: EdgeInsets.all(isMobile ? 14 : 18),
+          constraints: BoxConstraints(
+            maxWidth: maxWidth,
+            minWidth: isMobile ? 260.0 : 280.0,
+          ),
+          margin: EdgeInsets.only(
+            left: isMobile ? 8.0 : 12.0,
+            right: isMobile ? 8.0 : 12.0,
+            top: isMobile ? 8.0 : 12.0,
+            bottom: isMobile ? 8.0 : 12.0,
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 14.0 : 18.0,
+            vertical: isMobile ? 12.0 : 16.0,
+          ),
           decoration: BoxDecoration(
             color: scheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(20),
@@ -644,41 +803,46 @@ class _OnboardingOverlayState extends State<OnboardingOverlay>
 
               const SizedBox(height: 20),
 
-              // Кнопки
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // Скрываем кнопку "Пропустить" если обучение с одним шагом
-                  if (widget.showSkip && widget.totalSteps > 1)
-                    TextButton(
-                      onPressed: widget.onSkip,
-                      child:                       Text(
-                        'Пропустить',
-                        style: TextStyle(
-                          color: scheme.onSurfaceVariant,
-                          decoration: TextDecoration.none,
+              // Кнопки с дополнительным padding снизу для предотвращения перекрытия
+              Padding(
+                padding: EdgeInsets.only(
+                  bottom: isMobile ? 8.0 : 12.0, // Дополнительный отступ снизу
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // Скрываем кнопку "Пропустить" если обучение с одним шагом
+                    if (widget.showSkip && widget.totalSteps > 1)
+                      TextButton(
+                        onPressed: widget.onSkip,
+                        child: Text(
+                          'Пропустить',
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
+                            decoration: TextDecoration.none,
+                          ),
                         ),
                       ),
-                    ),
-                  if (widget.showSkip && widget.totalSteps > 1)
-                    const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: widget.onNext,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
+                    if (widget.showSkip && widget.totalSteps > 1)
+                      const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: widget.onNext,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        elevation: 2,
                       ),
-                      elevation: 2,
+                      child: Text(
+                        widget.currentStep < widget.totalSteps
+                            ? 'Далее'
+                            : 'Завершить',
+                        style: const TextStyle(decoration: TextDecoration.none),
+                      ),
                     ),
-                    child: Text(
-                      widget.currentStep < widget.totalSteps
-                          ? 'Далее'
-                          : 'Завершить',
-                      style: const TextStyle(decoration: TextDecoration.none),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/chat/chat.dart';
-import '../widgets/theme_mode_button.dart';
 import '../widgets/settings_icon_button.dart';
 import '../widgets/top_toast.dart';
 import '../widgets/analytics/analytics_filter_card.dart';
@@ -26,7 +25,7 @@ class DailyCostChartScreen extends StatefulWidget {
 }
 
 class _DailyCostChartScreenState extends State<DailyCostChartScreen> {
-  _Metric _metric = _Metric.cost;
+  _Metric _metric = _Metric.tokens;
   _Metric _lastNonCostMetric = _Metric.tokens;
 
   _RangePreset _range = _RangePreset.d30;
@@ -658,19 +657,23 @@ class _DailyCostChartScreenState extends State<DailyCostChartScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Stack(
-      children: [
-        Scaffold(
-          appBar: AppBar(
-            toolbarHeight: 48,
-            title: const Text('Расходы по дням', style: TextStyle(fontSize: 14)),
-            leading: IconButton(
-              tooltip: 'На главную',
-              icon: Icon(Icons.home, size: 18, color: scheme.onSurfaceVariant),
-              onPressed: () => context.go('/home'),
-            ),
+    return WillPopScope(
+      onWillPop: () async {
+        if (!context.mounted) return false;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/home');
+        }
+        return false;
+      },
+      child: Stack(
+        children: [
+          Scaffold(
+            appBar: AppBar(
+              toolbarHeight: 48,
+              title: const Text('Расходы по дням', style: TextStyle(fontSize: 14)),
             actions: const [
-              ThemeModeButton(),
               SettingsIconButton(),
               SizedBox(width: 8),
             ],
@@ -816,7 +819,8 @@ class _DailyCostChartScreenState extends State<DailyCostChartScreen> {
             onNext: _onOnboardingNext,
             onSkip: _onOnboardingSkip,
           ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../widgets/theme_mode_button.dart';
 import '../widgets/settings_icon_button.dart';
 import '../providers/onboarding_provider.dart';
 import '../widgets/onboarding/onboarding_overlay.dart';
@@ -157,22 +156,26 @@ class _ProviderSettingsScreenState extends State<ProviderSettingsScreen> {
       );
     }
 
-    return Stack(
-      children: [
-        Scaffold(
-          appBar: AppBar(
-            title: const Text('Настройка провайдера'),
-            actions: [
-              const ThemeModeButton(),
-              SettingsIconButton(),
-              const SizedBox(width: 8),
-            ],
-            leading: IconButton(
-              tooltip: 'На главную',
-              icon: const Icon(Icons.home),
-              onPressed: () => context.go('/home'),
+    return WillPopScope(
+      onWillPop: () async {
+        if (!context.mounted) return false;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/home');
+        }
+        return false;
+      },
+      child: Stack(
+        children: [
+          Scaffold(
+            appBar: AppBar(
+              title: const Text('Настройка провайдера'),
+              actions: [
+                SettingsIconButton(),
+                const SizedBox(width: 8),
+              ],
             ),
-          ),
           body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
@@ -211,7 +214,8 @@ class _ProviderSettingsScreenState extends State<ProviderSettingsScreen> {
             onNext: _onOnboardingNext,
             onSkip: _onOnboardingSkip,
           ),
-      ],
+        ],
+      ),
     );
   }
 }

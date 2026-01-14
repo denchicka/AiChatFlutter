@@ -301,17 +301,17 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
             segments: const [
               ButtonSegment(
                 value: ModelSortKey.cost,
-                label: Text('Цена'),
+                label: Text('Цена', style: TextStyle(fontSize: 11)),
                 icon: Icon(Icons.attach_money_rounded, size: 18),
               ),
               ButtonSegment(
                 value: ModelSortKey.context,
-                label: Text('Контекст'),
+                label: Text('Контекст', style: TextStyle(fontSize: 11)),
                 icon: Icon(Icons.memory_rounded, size: 18),
               ),
               ButtonSegment(
                 value: ModelSortKey.name,
-                label: Text('A–Я'),
+                label: Text('A–Я', style: TextStyle(fontSize: 11)),
                 icon: Icon(Icons.sort_by_alpha_rounded, size: 18),
               ),
             ],

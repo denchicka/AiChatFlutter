@@ -205,12 +205,27 @@ class UsagePanel extends StatelessWidget {
         }).toList();
 
         if (!anyData) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(
-                'Нет данных',
-                style: TextStyle(color: scheme.onSurfaceVariant),
+          return SizedBox(
+            height: 200,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.insights_outlined,
+                    size: 48,
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Нет данных',
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
             ),
           );
@@ -274,9 +289,13 @@ class _StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8 : 10,
+        vertical: isMobile ? 6 : 7,
+      ),
       decoration: BoxDecoration(
         color: scheme.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(12),
@@ -285,14 +304,18 @@ class _StatChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: scheme.onSurfaceVariant),
+          Icon(icon, size: isMobile ? 12 : 14, color: scheme.onSurfaceVariant),
           const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 11,
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: isMobile ? 10 : 11,
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
