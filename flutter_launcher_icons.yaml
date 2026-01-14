@@ -1,0 +1,13 @@
+flutter_launcher_icons:
+  android: true
+  min_sdk_android: 21
+
+  image_path: "assets/icon.png"
+
+  adaptive_icon_background: "assets/transparent.png"
+  adaptive_icon_foreground: "assets/icon.png"
+
+  windows:
+    generate: false
+    image_path: "assets/icon.ico"
+    icon_path: "assets/icon.ico"
