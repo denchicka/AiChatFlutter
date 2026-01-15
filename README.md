@@ -274,7 +274,7 @@ VSEGPT_API_KEY=your-api-key-here
 
 ## 📝 Лицензия
 
-MIT License - см. файл [LICENSE](LICENSE)
+MIT License
 
 ## 👤 Автор
 
